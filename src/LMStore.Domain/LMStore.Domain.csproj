@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Infrastructure é uma camada de confiança (não um consumidor arbitrário): precisa
+         construir um MovimentoEstoque (construtor internal) diretamente no caminho rápido
+         de reserva atômica de estoque, sem passar pelo Estoque agregado. Application e
+         qualquer outro projeto continuam sem acesso a isso — o limite do agregado se
+         mantém para todo o resto do sistema. -->
+    <InternalsVisibleTo Include="LMStore.Infrastructure" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LMStore.Api/LMStore.Api.csproj" />
+    <Project Path="src/LMStore.Application/LMStore.Application.csproj" />
+    <Project Path="src/LMStore.Domain/LMStore.Domain.csproj" />
+    <Project Path="src/LMStore.Infrastructure/LMStore.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LMStore.Tests/LMStore.Tests.csproj" />
+  </Folder>
+</Solution>
