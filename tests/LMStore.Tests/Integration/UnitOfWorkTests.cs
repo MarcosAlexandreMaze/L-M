@@ -29,11 +29,17 @@ public class UnitOfWorkTests
         var options = CriarOptions();
         var email = new Email($"regressao-{Guid.NewGuid():N}@lmstore.com");
 
+        // TokenHash tem índice único no banco (Etapa 8, de propósito) — usar um valor
+        // por execução evita colidir com runs anteriores do próprio teste no mesmo banco
+        // (o banco de desenvolvimento não é resetado entre etapas, só entre execuções
+        // isoladas de integração feitas de propósito).
+        var sufixo = Guid.NewGuid().ToString("N");
+
         Guid usuarioId;
         await using (var db = new LMStoreDbContext(options))
         {
             var usuario = new Usuario(email, "hash-fake", PerfilUsuario.Cliente);
-            usuario.EmitirRefreshToken("hash-token-1", TimeSpan.FromDays(7));
+            usuario.EmitirRefreshToken($"hash-token-1-{sufixo}", TimeSpan.FromDays(7));
 
             db.Usuarios.Add(usuario);
             await db.SaveChangesAsync();
@@ -47,7 +53,7 @@ public class UnitOfWorkTests
             var unitOfWork = new UnitOfWork(db);
 
             var usuario = await repositorio.ObterPorEmailAsync(email);
-            usuario!.EmitirRefreshToken("hash-token-2", TimeSpan.FromDays(7));
+            usuario!.EmitirRefreshToken($"hash-token-2-{sufixo}", TimeSpan.FromDays(7));
 
             await unitOfWork.SalvarAsync(); // não deve lançar DbUpdateConcurrencyException
         }

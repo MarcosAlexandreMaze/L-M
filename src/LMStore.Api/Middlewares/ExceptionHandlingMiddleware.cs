@@ -24,6 +24,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             NotFoundException => (StatusCodes.Status404NotFound, excecao.Message),
             ConflictException => (StatusCodes.Status409Conflict, excecao.Message),
             DomainException => (StatusCodes.Status400BadRequest, excecao.Message),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Não autenticado."),
             // Qualquer outra exceção é inesperada — a mensagem exposta ao cliente é
             // sempre genérica, nunca a mensagem real (que pode conter detalhe interno).
             // O stack trace completo só vai para o log, nunca para a resposta HTTP.

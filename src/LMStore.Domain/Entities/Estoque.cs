@@ -17,6 +17,19 @@ public class Estoque : Entity
     // o EF Core só consegue vincular automaticamente um parâmetro de construtor a uma
     // propriedade com o mesmo nome (fazendo o binding direto na materialização, sem
     // precisar de um setter público) — ver Etapa 6 para o contexto completo.
+    //
+    // Importante: o CONSTRUTOR não registra nenhum movimento. É por isso que existe
+    // Criar(...) abaixo. O motivo é sutil e real (achado testando a Etapa 12 ao vivo):
+    // o EF Core roda ESTE MESMO construtor toda vez que materializa um Estoque já
+    // existente vindo do banco. Propriedades escalares (QuantidadeDisponivel etc.) não
+    // têm problema — o EF sobrescreve com o valor real da coluna logo em seguida. Mas
+    // um efeito colateral que ADICIONA a uma coleção (_movimentos.Add(...)) não tem
+    // essa correção automática: o EF só ACRESCENTA itens vindos do banco à coleção, não
+    // a zera antes — então cada leitura de um Estoque existente criaria um
+    // MovimentoEstoque "fantasma" a mais em memória (nunca salvo, mas presente na
+    // resposta, com um Id e um instante diferentes a cada chamada). Pedido nunca teve
+    // esse problema porque já populava suas coleções (Itens/Pagamentos) fora do
+    // construtor, em CriarDeCarrinho — o mesmo padrão que Estoque adota agora.
     public Estoque(Guid variacaoProdutoId, int quantidadeDisponivel = 0)
     {
         if (quantidadeDisponivel < 0)
@@ -25,9 +38,16 @@ public class Estoque : Entity
         VariacaoProdutoId = variacaoProdutoId;
         QuantidadeDisponivel = quantidadeDisponivel;
         QuantidadeReservada = 0;
+    }
 
-        if (quantidadeDisponivel > 0)
-            RegistrarMovimento(TipoMovimentoEstoque.Entrada, quantidadeDisponivel, "Estoque inicial", null);
+    public static Estoque Criar(Guid variacaoProdutoId, int quantidadeInicial = 0)
+    {
+        var estoque = new Estoque(variacaoProdutoId, quantidadeInicial);
+
+        if (quantidadeInicial > 0)
+            estoque.RegistrarMovimento(TipoMovimentoEstoque.Entrada, quantidadeInicial, "Estoque inicial", null);
+
+        return estoque;
     }
 
     public void Reservar(int quantidade, Guid pedidoId)

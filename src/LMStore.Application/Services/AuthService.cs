@@ -8,6 +8,7 @@ using LMStore.Domain.Enums;
 using LMStore.Domain.Exceptions;
 using LMStore.Domain.Interfaces;
 using LMStore.Domain.ValueObjects;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LMStore.Application.Services;
@@ -18,7 +19,8 @@ public class AuthService(
     IPasswordHasher passwordHasher,
     IJwtTokenGenerator jwtTokenGenerator,
     IUnitOfWork unitOfWork,
-    IOptions<JwtOptions> jwtOptions) : IAuthService
+    IOptions<JwtOptions> jwtOptions,
+    ILogger<AuthService> logger) : IAuthService
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
@@ -46,6 +48,8 @@ public class AuthService(
         var resultado = EmitirTokens(usuario);
         await unitOfWork.SalvarAsync(ct);
 
+        logger.LogInformation("Novo cliente registrado: {ClienteId} ({Email})", cliente.Id, email);
+
         return resultado;
     }
 
@@ -58,10 +62,18 @@ public class AuthService(
         // diferenciar os dois casos permite a um atacante enumerar quais e-mails têm
         // conta cadastrada (username enumeration), então a resposta é sempre a mesma.
         if (usuario is null || !usuario.Ativo || !passwordHasher.Verificar(request.Senha, usuario.SenhaHash))
+        {
+            // O e-mail (não a senha, óbvio) entra no log — é o mesmo dado que já aparece
+            // em qualquer painel de autenticação e ajuda a investigar tentativas de
+            // força bruta contra uma conta específica.
+            logger.LogWarning("Tentativa de login recusada para {Email}", request.Email);
             throw new DomainException("E-mail ou senha inválidos.");
+        }
 
         var resultado = EmitirTokens(usuario);
         await unitOfWork.SalvarAsync(ct);
+
+        logger.LogInformation("Login bem-sucedido: {UsuarioId} ({Email})", usuario.Id, email);
 
         return resultado;
     }

@@ -7,7 +7,21 @@ namespace LMStore.Tests.Domain.Entities;
 public class EstoqueTests
 {
     [Fact]
-    public void Deve_criar_estoque_zerado_sem_movimentos_por_padrao()
+    public void Construtor_deve_criar_estoque_sem_nenhum_movimento_mesmo_com_quantidade_positiva()
+    {
+        // Regressão de um bug real (Etapa 12): o EF Core reexecuta o construtor toda
+        // vez que materializa um Estoque já existente vindo do banco. Se o construtor
+        // registrasse um movimento aqui, cada LEITURA de um estoque existente geraria
+        // um MovimentoEstoque "fantasma" a mais em memória. Por isso o construtor tem
+        // que ficar puro — quem registra o movimento de entrada é Estoque.Criar().
+        var estoque = new Estoque(Guid.NewGuid(), quantidadeDisponivel: 50);
+
+        Assert.Equal(50, estoque.QuantidadeDisponivel);
+        Assert.Empty(estoque.Movimentos);
+    }
+
+    [Fact]
+    public void Estoque_zerado_por_padrao_nao_deve_ter_movimentos()
     {
         var estoque = new Estoque(Guid.NewGuid());
 
@@ -18,12 +32,20 @@ public class EstoqueTests
     [Fact]
     public void Criar_com_quantidade_inicial_deve_registrar_movimento_de_entrada()
     {
-        var estoque = new Estoque(Guid.NewGuid(), quantidadeDisponivel: 50);
+        var estoque = Estoque.Criar(Guid.NewGuid(), quantidadeInicial: 50);
 
         Assert.Equal(50, estoque.QuantidadeDisponivel);
         var movimento = Assert.Single(estoque.Movimentos);
         Assert.Equal(TipoMovimentoEstoque.Entrada, movimento.Tipo);
         Assert.Equal(50, movimento.Quantidade);
+    }
+
+    [Fact]
+    public void Criar_com_quantidade_zero_nao_deve_registrar_movimento()
+    {
+        var estoque = Estoque.Criar(Guid.NewGuid());
+
+        Assert.Empty(estoque.Movimentos);
     }
 
     [Fact]
@@ -35,7 +57,7 @@ public class EstoqueTests
     [Fact]
     public void Reservar_deve_mover_quantidade_de_disponivel_para_reservada()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
 
         estoque.Reservar(4, Guid.NewGuid());
 
@@ -46,7 +68,7 @@ public class EstoqueTests
     [Fact]
     public void Nao_deve_reservar_mais_do_que_o_disponivel()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 5);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 5);
 
         Assert.Throws<DomainException>(() => estoque.Reservar(6, Guid.NewGuid()));
     }
@@ -56,13 +78,13 @@ public class EstoqueTests
     {
         // Garante que a validação acontece ANTES de qualquer mutação — se a ordem
         // fosse invertida, uma reserva rejeitada ainda deixaria o estoque corrompido.
-        var estoque = new Estoque(Guid.NewGuid(), 5);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 5);
 
         Assert.Throws<DomainException>(() => estoque.Reservar(10, Guid.NewGuid()));
 
         Assert.Equal(5, estoque.QuantidadeDisponivel);
         Assert.Equal(0, estoque.QuantidadeReservada);
-        Assert.Single(estoque.Movimentos); // só a entrada inicial do construtor, nenhum movimento da reserva rejeitada
+        Assert.Single(estoque.Movimentos); // só a entrada inicial de Criar(), nenhum movimento da reserva rejeitada
     }
 
     [Theory]
@@ -70,7 +92,7 @@ public class EstoqueTests
     [InlineData(-1)]
     public void Nao_deve_reservar_quantidade_zero_ou_negativa(int quantidadeInvalida)
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
 
         Assert.Throws<DomainException>(() => estoque.Reservar(quantidadeInvalida, Guid.NewGuid()));
     }
@@ -78,7 +100,7 @@ public class EstoqueTests
     [Fact]
     public void Cancelar_reserva_deve_devolver_quantidade_ao_disponivel()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
         var pedidoId = Guid.NewGuid();
         estoque.Reservar(4, pedidoId);
 
@@ -91,7 +113,7 @@ public class EstoqueTests
     [Fact]
     public void Nao_deve_cancelar_reserva_maior_do_que_a_reservada()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
         var pedidoId = Guid.NewGuid();
         estoque.Reservar(4, pedidoId);
 
@@ -101,7 +123,7 @@ public class EstoqueTests
     [Fact]
     public void Confirmar_saida_deve_reduzir_apenas_a_quantidade_reservada()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
         var pedidoId = Guid.NewGuid();
         estoque.Reservar(4, pedidoId);
 
@@ -114,7 +136,7 @@ public class EstoqueTests
     [Fact]
     public void Nao_deve_confirmar_saida_maior_do_que_a_reservada()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
 
         Assert.Throws<DomainException>(() => estoque.ConfirmarSaida(1, Guid.NewGuid()));
     }
@@ -122,7 +144,7 @@ public class EstoqueTests
     [Fact]
     public void Repor_deve_aumentar_a_quantidade_disponivel()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
 
         estoque.Repor(20, "Novo lote recebido do fornecedor");
 
@@ -132,7 +154,7 @@ public class EstoqueTests
     [Fact]
     public void Nao_deve_repor_sem_informar_motivo()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
 
         Assert.Throws<DomainException>(() => estoque.Repor(10, ""));
 
@@ -143,7 +165,7 @@ public class EstoqueTests
     [Fact]
     public void Ajustar_para_deve_aceitar_correcao_para_cima_ou_para_baixo()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
 
         estoque.AjustarPara(7, "Contagem de inventário");
 
@@ -155,7 +177,7 @@ public class EstoqueTests
     [Fact]
     public void Ajustar_para_o_mesmo_valor_atual_deve_falhar()
     {
-        var estoque = new Estoque(Guid.NewGuid(), 10);
+        var estoque = Estoque.Criar(Guid.NewGuid(), 10);
 
         Assert.Throws<DomainException>(() => estoque.AjustarPara(10, "Sem mudança"));
     }

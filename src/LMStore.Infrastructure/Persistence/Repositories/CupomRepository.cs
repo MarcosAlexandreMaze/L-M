@@ -6,6 +6,9 @@ namespace LMStore.Infrastructure.Persistence.Repositories;
 
 public class CupomRepository(LMStoreDbContext context) : ICupomRepository
 {
+    public Task<Cupom?> ObterPorIdAsync(Guid id, CancellationToken ct = default) =>
+        context.Cupons.FirstOrDefaultAsync(c => c.Id == id, ct);
+
     public Task<Cupom?> ObterPorCodigoAsync(string codigo, CancellationToken ct = default) =>
         context.Cupons.FirstOrDefaultAsync(c => c.Codigo == codigo.Trim().ToUpper(), ct);
 

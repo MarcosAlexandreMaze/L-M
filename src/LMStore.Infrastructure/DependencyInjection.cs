@@ -1,9 +1,11 @@
 using LMStore.Application.Common;
 using LMStore.Application.Interfaces;
 using LMStore.Domain.Interfaces;
+using LMStore.Infrastructure.Payments;
 using LMStore.Infrastructure.Persistence;
 using LMStore.Infrastructure.Persistence.Repositories;
 using LMStore.Infrastructure.Security;
+using LMStore.Infrastructure.Shipping;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,8 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SecaoConfiguracao));
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddSingleton<IPaymentGateway, FakePaymentGateway>();
+        services.AddSingleton<IShippingCalculator, FakeShippingCalculator>();
 
         return services;
     }

@@ -9,7 +9,7 @@ namespace LMStore.Infrastructure.Persistence.Repositories;
 public class EstoqueRepository(LMStoreDbContext context) : IEstoqueRepository
 {
     public Task<Estoque?> ObterPorVariacaoAsync(Guid variacaoProdutoId, CancellationToken ct = default) =>
-        context.Estoques.FirstOrDefaultAsync(e => e.VariacaoProdutoId == variacaoProdutoId, ct);
+        context.Estoques.Include(e => e.Movimentos).FirstOrDefaultAsync(e => e.VariacaoProdutoId == variacaoProdutoId, ct);
 
     public async Task ReservarAsync(Guid variacaoProdutoId, int quantidade, Guid pedidoId, CancellationToken ct = default)
     {

@@ -32,7 +32,7 @@ public class EstoqueRepositoryTests
             "Camiseta Teste", "Descrição de teste", marca.Id, categoria.Id, new Dinheiro(100),
             GeneroProduto.Unissex, TipoRoupa.Camiseta, "Algodão");
         var variacao = roupa.AdicionarVariacao(new Sku($"SKU-{Guid.NewGuid():N}"), null, "P", "Preta");
-        var estoque = new Estoque(variacao.Id, quantidadeInicial);
+        var estoque = Estoque.Criar(variacao.Id, quantidadeInicial);
 
         db.Marcas.Add(marca);
         db.Categorias.Add(categoria);
